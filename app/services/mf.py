@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from helpers import compute_interaction_score
 
 
 class MatrixFactorization:
@@ -105,7 +106,7 @@ class MatrixFactorization:
 
 if __name__ == "__main__":
     # Crear modelo
-    model = MatrixFactorization(k=8, lr=0.03, reg=0.02, seed=1)
+    model = MatrixFactorization(k=20, lr=0.03, reg=0.02, seed=1)
 
     # Crear 5 usuarios (ids arbitrarios)
     users = [101, 102, 103, 104, 105]
@@ -124,8 +125,8 @@ if __name__ == "__main__":
 
     # 10 interacciones: (user_id, video_id, rating in [0,1])
     interactions = [
-        (101, 201, 1.0),   # user 101 completó video 201
-        (101, 202, 0.6),
+        (101, 201, compute_interaction_score(1, 22, 60, 0, "")),   # user 101 completó video 201
+        (101, 202, compute_interaction_score(0, 10, 10, 0, "")),
         (102, 201, 0.4),
         (102, 203, 0.9),
         (103, 204, 0.7),
