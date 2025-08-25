@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from app.models import RecommendationRequest, RecommendationResponse
-from app.recommender import recommend
+from models import RecommendationRequest, RecommendationResponse
+from services.mf import MatrixFactorization 
 
 router = APIRouter()
 

@@ -4,8 +4,8 @@ from helpers import compute_interaction_score
 
 
 class MatrixFactorization:
-    def __init__(self, k=30, lr=0.02, reg=0.02, seed=42):
-        np.random.seed(seed)
+    def __init__(self, k=30, lr=1, reg=0.5, seed=42):
+        #np.random.seed(seed)
         self.k = k  # Number of latent factors
         self.lr = lr  # Learning rate
         self.reg = reg  # Regularization parameter
@@ -27,7 +27,8 @@ class MatrixFactorization:
         
         :return: A numpy array of shape (k,)
         """
-        return np.random.normal(scale=0.1, size=self.k)
+        rng = np.random.default_rng()
+        return rng.normal(loc=0.0, scale=0.01, size=self.k).astype(np.float32)
 
     def _add_user(self, user_id):
         idx = len(self.user_map)
@@ -106,7 +107,9 @@ class MatrixFactorization:
 
 if __name__ == "__main__":
     # Crear modelo
-    model = MatrixFactorization(k=20, lr=0.03, reg=0.02, seed=1)
+    model = MatrixFactorization(k=20, lr=0.5, reg=0.02, seed=1)
+
+    # User 101 and User 103 tienen los mismos gustos
 
     # Crear 5 usuarios (ids arbitrarios)
     users = [101, 102, 103, 104, 105]
@@ -114,9 +117,10 @@ if __name__ == "__main__":
         model._add_user(u)
 
     # Crear 10 vídeos (ids arbitrarios)
-    videos = list(range(201, 201 + 10))  # 201..210
+    videos = list(range(201, 201 + 20))  # 201..220
     for v in videos:
         model._add_video(v)
+    
 
     # Mostrar shapes iniciales
     print("P shape (users x k):", model.P.shape)
@@ -125,17 +129,32 @@ if __name__ == "__main__":
 
     # 10 interacciones: (user_id, video_id, rating in [0,1])
     interactions = [
+        # User 101
         (101, 201, compute_interaction_score(1, 22, 60, 0, "")),   # user 101 completó video 201
-        (101, 202, compute_interaction_score(0, 10, 10, 0, "")),
+        (101, 202, compute_interaction_score(1, 10, 20, 0, "")),
+        (101, 210, compute_interaction_score(1, 10, 15, 0, "")),
+        (101, 211, compute_interaction_score(1, 20, 60, 0, "")),
+        (101, 212, compute_interaction_score(0, 10, 10, 0, "")),
+        (101, 213, compute_interaction_score(1, 20, 20, 0, "")),
+        (101, 218, compute_interaction_score(1, 20, 20, 0, "")),
+        
+
         (102, 201, 0.4),
         (102, 203, 0.9),
-        (103, 204, 0.7),
         (104, 205, 0.2),
         (105, 206, 0.8),
-        (103, 207, 0.5),
         (104, 208, 0.95),
         (105, 209, 0.3),
+        # User 103
+        (103, 201, compute_interaction_score(1, 22, 60, 0, "")),   # user 101 completó video 201
+        (103, 202, compute_interaction_score(1, 10, 20, 0, "")),
+        (103, 210, compute_interaction_score(1, 10, 15, 0, "")),
+        (103, 211, compute_interaction_score(1, 20, 60, 0, "")),
+        (103, 212, compute_interaction_score(0, 10, 10, 0, "")),
+
     ]
+
+    
 
     # Aplicar interacciones online (cada una actualiza P y Q)
     for i, (u, v, r) in enumerate(interactions, 1):
@@ -148,6 +167,14 @@ if __name__ == "__main__":
     print("Q shape:", model.Q.shape)
     print()
 
+    # check update moves prediction toward rating
+    u, v, r = 101, 213, 1.0
+    pred_before = model.P[model.user_map[u]].dot(model.Q[model.video_map[v]])
+    model.update(u, v, r)
+    pred_after = model.P[model.user_map[u]].dot(model.Q[model.video_map[v]])
+    print(f"Pred before: {pred_before:.4f}, after update with r={r}: {pred_after:.4f}")
+    assert pred_after > pred_before
+
     # Para cada usuario, mostrar top-3 recomendaciones
     print("Top-3 recomendaciones por usuario (video_id, score):")
     # construir set de vistos para cada usuario a partir de interactions
@@ -158,3 +185,4 @@ if __name__ == "__main__":
     for u in users:
         recs = model.recommend(u, top_n=3, exclude=seen.get(u, set()))
         print(f"User {u}: {recs}")
+    
