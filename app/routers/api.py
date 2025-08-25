@@ -1,36 +1,12 @@
 # app/routers/api.py   (or your api.py)
 from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
-from datetime import datetime
 from typing import List, Union
-
+from app.models import RecommendationRequest, RecommendationResponse, InteractionRequest
 # Ajusta el import si tu helper está en app.services.scoring o app.services.helpers
 from app.services import mf                        # module that implements init_model/get_model/save_model
 from app.services.helpers import compute_interaction_score  
 
 router = APIRouter()
-
-# --- request models ---
-class RecommendationRequest(BaseModel):
-    user_id: int
-    top_n: Optional[int] = 10
-
-class RecommendationResponse(BaseModel):
-    user_id: int
-    recommendations: list
-
-class InteractionRequest(BaseModel):
-    user_id: int
-    video_id: int
-    like: Optional[int] = 0
-    comentario: Optional[str] = ""
-    watchtime: Optional[float] = 0.0
-    duration: Optional[float] = None         # optional: helps compute watch ratio
-    dont_suggest: Optional[int] = 0
-    timestamp: Optional[datetime] = None
-    user_meta: Optional[Dict[str, Any]] = None   # optional metadata for warm-start
-    video_meta: Optional[Dict[str, Any]] = None
 
 # --- internal helper to process interaction (safe to call in background) ---
 def _process_interaction(payload: dict):
