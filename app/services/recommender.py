@@ -1,7 +1,7 @@
-from mf import MatrixFactorization
+from .mf import MatrixFactorization
 import numpy as np
 import pandas as pd
-from helpers import compute_interaction_score
+from .helpers import compute_interaction_score
 
 
 

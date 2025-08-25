@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from datetime import datetime
+from typing import List, Union
 
 # Ajusta el import si tu helper está en app.services.scoring o app.services.helpers
 from app.services import mf                        # module that implements init_model/get_model/save_model
@@ -71,28 +72,39 @@ def get_recommendation(req: RecommendationRequest, request: Request):
 
 # --- endpoint: interact (synchronous update) ---
 @router.post("/interact")
-def interact_sync(payload: InteractionRequest):
+def interact_sync(payload: Union[InteractionRequest, List[InteractionRequest]]):
     """
     Synchronous: computes score and updates model within the request.
     Use this for low-throughput or when you want updates applied immediately.
     """
-    # compute score
-    score = compute_interaction_score(
-        like=payload.like,
-        watchtime=payload.watchtime or 0.0,
-        duration=payload.duration,
-        dont_suggest=payload.dont_suggest,
-        comment=payload.comentario or ""
-    )
+
+    
 
     model = mf.get_model()
     if model is None:
         raise HTTPException(status_code=503, detail="Model not ready")
+    
+    interactions = payload if isinstance(payload, list) else [payload]
 
-    # update (this must be thread-safe inside model)
-    model.update(payload.user_id, payload.video_id, score)
+    results = []
+    for inter in interactions:
+        score = compute_interaction_score(
+            like=inter.like,
+            watchtime=inter.watchtime or 0.0,
+            duration=inter.duration,
+            dont_suggest=inter.dont_suggest,
+            comment=inter.comentario or ""
+        )
 
-    return {"status": "ok", "applied": True, "score": float(score)}
+        model.update(inter.user_id, inter.video_id, score)
+
+        results.append({
+            "user_id": inter.user_id,
+            "video_id": inter.video_id,
+            "score": float(score)
+        })
+
+    return {"status": "ok", "applied": len(results), "results": results}
 
 # --- endpoint: interact (background update) - RECOMMENDED for production ---
 @router.post("/interact_bg")

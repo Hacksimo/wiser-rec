@@ -3,7 +3,7 @@ import os
 import pickle
 import threading
 import numpy as np
-from helpers import compute_interaction_score
+from .helpers import compute_interaction_score
 
 MODEL_PATH = os.environ.get("MF_MODEL_PATH", "data/mf_model.pkl")
 
@@ -45,20 +45,20 @@ class MatrixFactorization:
 
     def update(self, user_id, video_id, rating):
         # ensure existence
-        with self.lock:
-            if user_id not in self.user_map:
-                self._add_user(user_id)
-            if video_id not in self.video_map:
-                self._add_video(video_id)
-            u = self.user_map[user_id]
-            v = self.video_map[video_id]
-            # do SGD update (in lock to be safe)
-            pred = float(self.P[u].dot(self.Q[v]))
-            err = rating - pred
-            pu = self.P[u].copy()
-            qv = self.Q[v].copy()
-            self.P[u] += self.lr * (err * qv - self.reg * pu)
-            self.Q[v] += self.lr * (err * pu - self.reg * qv)
+        #with self.lock:
+        if user_id not in self.user_map:
+            self._add_user(user_id)
+        if video_id not in self.video_map:
+            self._add_video(video_id)
+        u = self.user_map[user_id]
+        v = self.video_map[video_id]
+        # do SGD update (in lock to be safe)
+        pred = float(self.P[u].dot(self.Q[v]))
+        err = rating - pred
+        pu = self.P[u].copy()
+        qv = self.Q[v].copy()
+        self.P[u] += self.lr * (err * qv - self.reg * pu)
+        self.Q[v] += self.lr * (err * pu - self.reg * qv)
 
     def recommend(self, user_id, top_n=10, exclude_seen=set()):
         # returns list of (video_id, score)
@@ -76,6 +76,18 @@ class MatrixFactorization:
             if len(out) >= top_n:
                 break
         return out
+    
+    def __getstate__(self):
+        # Exclude lock when pickling
+        state = self.__dict__.copy()
+        if "lock" in state:
+            del state["lock"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Recreate lock after unpickling
+        self.lock = threading.Lock()
 
 # Module-level singleton
 _model: MatrixFactorization | None = None
