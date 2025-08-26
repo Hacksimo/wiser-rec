@@ -5,6 +5,9 @@ from app.models import RecommendationRequest, RecommendationResponse, Interactio
 # Ajusta el import si tu helper está en app.services.scoring o app.services.helpers
 from app.services import mf                        # module that implements init_model/get_model/save_model
 from app.services.helpers import compute_interaction_score  
+from app.services.redis.redis_client import interaction_queue
+from app.services.redis.redis_client import interaction_queue
+from app.services.redis.tasks import process_interaction
 
 router = APIRouter()
 
@@ -61,26 +64,13 @@ def interact_sync(payload: Union[InteractionRequest, List[InteractionRequest]]):
         raise HTTPException(status_code=503, detail="Model not ready")
     
     interactions = payload if isinstance(payload, list) else [payload]
-
-    results = []
+    
+    job_ids = []
     for inter in interactions:
-        score = compute_interaction_score(
-            like=inter.like,
-            watchtime=inter.watchtime or 0.0,
-            duration=inter.duration,
-            dont_suggest=inter.dont_suggest,
-            comment=inter.comentario or ""
-        )
+        job = interaction_queue.enqueue(process_interaction, inter.model_dump())
+        job_ids.append(job.id)
 
-        model.update(inter.user_id, inter.video_id, score)
-
-        results.append({
-            "user_id": inter.user_id,
-            "video_id": inter.video_id,
-            "score": float(score)
-        })
-
-    return {"status": "ok", "applied": len(results), "results": results}
+    return {"status": "queued", "jobs": job_ids}
 
 # --- endpoint: interact (background update) - RECOMMENDED for production ---
 @router.post("/interact_bg")

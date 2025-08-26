@@ -45,7 +45,7 @@ class MatrixFactorization:
 
     def update(self, user_id, video_id, rating):
         # ensure existence
-        
+        print(f"Update called: user_id={user_id}, video_id={video_id}, rating={rating}")
         if user_id not in self.user_map:
             self._add_user(user_id)
         if video_id not in self.video_map:
@@ -60,6 +60,7 @@ class MatrixFactorization:
             qv = self.Q[v].copy()
             self.P[u] += self.lr * (err * qv - self.reg * pu)
             self.Q[v] += self.lr * (err * pu - self.reg * qv)
+        
 
     def recommend(self, user_id, top_n=10, exclude_seen=set()):
         # returns list of (video_id, score)
@@ -116,6 +117,7 @@ def get_model() -> MatrixFactorization:
     return _model
 
 def save_model(path: str | None = None):
+    return
     global _model
     if _model is None:
         return
