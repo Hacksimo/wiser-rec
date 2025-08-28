@@ -8,7 +8,7 @@ from .helpers import compute_interaction_score
 MODEL_PATH = os.environ.get("MF_MODEL_PATH", "data/mf_model.pkl")
 
 class MatrixFactorization:
-    def __init__(self, k=32, lr=0.01, reg=0.02, seed=1):
+    def __init__(self, k=20, lr=0.5, reg=0.02, seed=1):
         rng = np.random.default_rng(seed)
         self.k = k
         self.lr = lr
@@ -23,6 +23,7 @@ class MatrixFactorization:
         self.lock = threading.Lock()
         # optional metadata indices
         self.videos_by_category = {}
+        self.seed = seed  # store seed for re-creation after unpickling
 
     def _init_vector(self):
         return self.rng.normal(0.0, 0.01, size=self.k).astype(np.float32)
@@ -79,22 +80,32 @@ class MatrixFactorization:
                 break
         return out
     
+    # ---------- pickling helpers ----------
     def __getstate__(self):
-        # Exclude lock when pickling
+        """
+        Remove lock and RNG from the pickled state (not picklable).
+        Numpy arrays are picklable.
+        """
         state = self.__dict__.copy()
         if "lock" in state:
             del state["lock"]
+        # rng can be large; remove and re-create from seed
+        if "rng" in state:
+            del state["rng"]
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        # Recreate lock after unpickling
+        # recreate runtime-only attributes
         self.lock = threading.Lock()
+        self.rng = np.random.default_rng(1)
+        
+        
 
 # Module-level singleton
 _model: MatrixFactorization | None = None
 
-def init_model(k=32, lr=0.01, reg=0.02, seed=1, load_path: str | None = None):
+def init_model(k=20, lr=0.5, reg=0.02, seed=1, load_path: str | None = None):
     """Initialize the global model (create or load from disk)."""
     global _model
     if _model is not None:
@@ -117,7 +128,6 @@ def get_model() -> MatrixFactorization:
     return _model
 
 def save_model(path: str | None = None):
-    return
     global _model
     if _model is None:
         return

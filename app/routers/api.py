@@ -5,9 +5,15 @@ from app.models import RecommendationRequest, RecommendationResponse, Interactio
 # Ajusta el import si tu helper está en app.services.scoring o app.services.helpers
 from app.services import mf                        # module that implements init_model/get_model/save_model
 from app.services.helpers import compute_interaction_score  
-from app.services.redis.redis_client import interaction_queue
-from app.services.redis.redis_client import interaction_queue
+from app.services.redis.redis_queue import interaction_queue
 from app.services.redis.tasks import process_interaction
+import json
+from typing import List, Union
+from fastapi import APIRouter, HTTPException
+
+from app.services.redis.redis_queue import interaction_queue
+from app.services.redis.redis_model import load_model
+from app.services.mf import MatrixFactorization
 
 router = APIRouter()
 
@@ -41,7 +47,7 @@ def _process_interaction(payload: dict):
 @router.post("/recommend", response_model=RecommendationResponse)
 def get_recommendation(req: RecommendationRequest, request: Request):
     # model can be retrieved via mf.get_model() or from app.state if you stored it there
-    model = mf.get_model()
+    model = load_model()
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     # you may want to fetch "seen" items from a store and pass exclude_seen
@@ -58,28 +64,12 @@ def interact_sync(payload: Union[InteractionRequest, List[InteractionRequest]]):
     """
 
     
-
-    model = mf.get_model()
-    if model is None:
-        raise HTTPException(status_code=503, detail="Model not ready")
     
     interactions = payload if isinstance(payload, list) else [payload]
     
     job_ids = []
     for inter in interactions:
-        job = interaction_queue.enqueue(process_interaction, inter.model_dump())
+        job = interaction_queue.enqueue("app.services.redis.tasks.process_interaction", inter.model_dump())
         job_ids.append(job.id)
 
     return {"status": "queued", "jobs": job_ids}
-
-# --- endpoint: interact (background update) - RECOMMENDED for production ---
-@router.post("/interact_bg")
-def interact_background(payload: InteractionRequest, background_tasks: BackgroundTasks):
-    """
-    Fast response: the interaction is enqueued into FastAPI BackgroundTasks
-    and processed asynchronously (still inside this process).
-    For higher scale, replace BackgroundTasks by a queue (Redis/Celery/RQ).
-    """
-    background_tasks.add_task(_process_interaction, payload.dict())
-    # reply immediately
-    return {"status": "accepted", "applied": False}

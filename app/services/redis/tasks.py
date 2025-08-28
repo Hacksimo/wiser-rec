@@ -1,29 +1,37 @@
-import pickle
+# app/services/redis/tasks.py
+from app.services.redis.redis_model import load_model, save_model, get_lock
+from app.services.mf import MatrixFactorization
 from app.services.helpers import compute_interaction_score
-from app.services import mf
 
-def process_interaction(inter):
+def process_interaction(interaction: dict):
     """
-    Worker function to compute score and update the MF model.
+    interaction is a plain dict with user_id, video_id, like, watchtime, duration, dont_suggest, comentario
+    This function will be executed by RQ worker processes.
     """
-    score = compute_interaction_score(
-        like=inter["like"],
-        watchtime=inter.get("watchtime", 0.0),
-        duration=inter["duration"],
-        dont_suggest=inter["dont_suggest"],
-        comment=inter.get("comentario", "")
-    )
+    # Try to acquire Redis lock to do atomic load->update->save
+    lock = get_lock(timeout=30)
+    got = lock.acquire(blocking=True)
+    if not got:
+        # Can't acquire lock -> either requeue or fail
+        raise RuntimeError("Could not acquire model lock")
 
-    model = mf.get_model()
-    if model:
-        model.update(inter["user_id"], inter["video_id"], score)
-        print(f"[UPDATE] user={inter['user_id']} video={inter['video_id']} score={score}")
-        with open("data/mf_model.pkl", "wb") as f:
-            pickle.dump(model, f)   # save updated model
-            print("Model saved to mf_model.pkl")
+    try:
+        model = load_model()
+        if model is None:
+            # initialize if missing
+            model = MatrixFactorization(k=32, lr=0.5, reg=0.02)
 
-    return {
-        "user_id": inter["user_id"],
-        "video_id": inter["video_id"],
-        "score": float(score)
-    }
+        score = compute_interaction_score(
+            like=interaction.get("like", 0),
+            watchtime=interaction.get("watchtime", 0.0),
+            duration=interaction.get("duration"),
+            dont_suggest=interaction.get("dont_suggest", 0),
+            comment=interaction.get("comentario", "")
+        )
+
+        model.update(interaction["user_id"], interaction["video_id"], score)
+
+        save_model(model)
+        return {"status": "ok", "user_id": interaction["user_id"], "video_id": interaction["video_id"], "score": float(score)}
+    finally:
+        lock.release()
