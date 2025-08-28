@@ -1,6 +1,7 @@
 # app/main.py
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from contextlib import asynccontextmanager
+from app.deps.api_key import require_api_key
 from app.services import mf    # your services/mf module (contains init_model/get_model/save_model)
 from app.routers import api    # your router(s)
 
@@ -8,7 +9,7 @@ from app.routers import api    # your router(s)
 async def lifespan(app: FastAPI):
     # STARTUP: called once when the app starts
     # initialize or load the model
-    mf.init_model(k=32, lr=0.01, reg=0.02, seed=1)
+    mf.init_model(k=20, lr=0.5, reg=0.02, seed=1)
     # optionally expose model on app.state (not required if you use mf.get_model())
     app.state.model = mf.get_model()
     try:
@@ -17,5 +18,5 @@ async def lifespan(app: FastAPI):
         # SHUTDOWN: called once when the app stops
         mf.save_model()
 
-app = FastAPI(title="Recommendation Service", lifespan=lifespan)
+app = FastAPI(title="Recommendation Service", lifespan=lifespan, dependencies=[Depends(require_api_key)])
 app.include_router(api.router)
