@@ -1,7 +1,7 @@
 # app/routers/api.py   (or your api.py)
 from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
 from typing import List, Union
-from app.models import RecommendationRequest, RecommendationResponse, InteractionRequest
+from app.models import RecommendationRequest, RecommendationResponse, InteractionRequest, ResetResponse
 # Ajusta el import si tu helper está en app.services.scoring o app.services.helpers
 from app.services import mf                        # module that implements init_model/get_model/save_model
 from app.services.helpers import compute_interaction_score  
@@ -12,7 +12,7 @@ from typing import List, Union
 from fastapi import APIRouter, HTTPException
 
 from app.services.redis.redis_queue import interaction_queue
-from app.services.redis.redis_model import load_model
+from app.services.redis.redis_model import load_model, reset_model
 from app.services.mf import MatrixFactorization
 
 router = APIRouter()
@@ -73,3 +73,12 @@ def interact_sync(payload: Union[InteractionRequest, List[InteractionRequest]]):
         job_ids.append(job.id)
 
     return {"status": "queued", "jobs": job_ids}
+
+
+@router.delete("/reset", response_model=ResetResponse)
+def reset_model_endpoint():
+    """
+    Resets the stored model in Redis. The in-memory model remains unchanged.
+    """
+    reset_model()
+    return ResetResponse(status="model reset in Redis")

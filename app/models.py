@@ -22,3 +22,6 @@ class InteractionRequest(BaseModel):
     timestamp: Optional[datetime] = None
     user_meta: Optional[Dict[str, Any]] = None   # optional metadata for warm-start
     video_meta: Optional[Dict[str, Any]] = None
+
+class ResetResponse(BaseModel):
+    status: str

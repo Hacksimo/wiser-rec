@@ -177,7 +177,7 @@ if __name__ == "__main__":
         (102, 203, 0.9),
         (104, 205, 0.2),
         (105, 206, 0.8),
-        (104, 208, 0.95),
+        (104, 208, compute_interaction_score(0, 1, 20, 0, "")),
         (105, 209, 0.3),
         # User 103
         (103, 201, compute_interaction_score(1, 22, 60, 0, "")),   # user 101 completó video 201

@@ -26,3 +26,9 @@ def get_lock(blocking: bool = True, timeout: int = 30):
     Returns a redis.lock.Lock object; use as context manager or call acquire/release.
     """
     return redis_conn.lock(LOCK_KEY, blocking=blocking, timeout=timeout)
+
+def reset_model(key: str = MODEL_KEY):
+    """
+    Deletes the stored model from Redis.
+    """
+    redis_conn.delete(key)
