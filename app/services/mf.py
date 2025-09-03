@@ -146,12 +146,12 @@ if __name__ == "__main__":
     # User 101 and User 103 tienen los mismos gustos
 
     # Crear 5 usuarios (ids arbitrarios)
-    users = [101, 102, 103, 104, 105]
+    users = [101, 102, 103, 104, 105, 106, 107]
     for u in users:
         model._add_user(u)
 
     # Crear 10 vídeos (ids arbitrarios)
-    videos = list(range(201, 201 + 20))  # 201..220
+    videos = list(range(201, 201 + 50))  # 201..220
     for v in videos:
         model._add_video(v)
     
@@ -185,6 +185,31 @@ if __name__ == "__main__":
         (103, 210, compute_interaction_score(1, 10, 15, 0, "")),
         (103, 211, compute_interaction_score(1, 20, 60, 0, "")),
         (103, 212, compute_interaction_score(0, 10, 10, 0, "")),
+
+
+        # User 106 and 107 have the same tastes
+        (106, 220, compute_interaction_score(0, 10, 10, 0, "")),
+        (106, 221, compute_interaction_score(1, 20, 20, 0, "")),
+        (106, 222, compute_interaction_score(1, 20, 20, 0, "")),
+        (106, 225, compute_interaction_score(1, 20, 20, 0, "")),
+        (106, 230, compute_interaction_score(1, 20, 20, 0, "")),
+        (106, 231, compute_interaction_score(1, 20, 20, 0, "")),
+        (106, 232, compute_interaction_score(1, 20, 20, 0, "")),
+        (106, 233, compute_interaction_score(1, 20, 20, 0, "")),
+        (106, 226, compute_interaction_score(0, 2, 20, 0, "")),
+
+        (107, 220, compute_interaction_score(0, 10, 10, 0, "")),
+        (107, 221, compute_interaction_score(1, 20, 20, 0, "")),
+        (107, 222, compute_interaction_score(1, 20, 20, 0, "")),
+        (107, 225, compute_interaction_score(0, 2, 20, 0, "")),
+        (107, 227, compute_interaction_score(1, 30, 30, 0, "")),
+        (107, 230, compute_interaction_score(1, 20, 20, 0, "")),
+        (107, 231, compute_interaction_score(1, 20, 20, 0, "")),
+        (107, 232, compute_interaction_score(1, 20, 20, 0, "")),
+        (107, 233, compute_interaction_score(1, 20, 20, 0, "")),
+        (107, 228, compute_interaction_score(1, 30, 30, 0, "")),
+        (107, 229, compute_interaction_score(0, 2, 30, 0, "")),
+        (107, 240, compute_interaction_score(1, 15, 15, 0, "")),
 
     ]
 
